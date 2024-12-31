@@ -50,6 +50,8 @@ const (
 	inputLogin
 	inputNetworkPort
 	inputIdentityFile
+	inputPassword
+	inputEchoPassword
 )
 
 type itemID struct{}
@@ -128,7 +130,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 	host.SSHClientConfig = ssh.StubConfig()
 
 	m := editModel{
-		inputs:       make([]input.Input, 6),
+		inputs:       make([]input.Input, 7), // Update the size to 7
 		hostStorage:  storage,
 		host:         wrap(&host),
 		help:         help.New(),
@@ -137,10 +139,7 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 		logger:       log,
 		focusedInput: initialFocusedInput,
 		title:        defaultTitle,
-		// This variable is for optimization. By introducing it, we can avoid unnecessary database reads
-		// every time we change values which depend on each other, for instance: "Title" and "Address".
-		// Use text search and see where 'isNewHost' is used.
-		isNewHost: hostNotFoundErr != nil,
+		isNewHost:    hostNotFoundErr != nil,
 	}
 
 	var t input.Input
@@ -176,13 +175,16 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 			t.SetLabel("Identity File")
 			t.CharLimit = 512
 			t.SetValue(host.IdentityFilePath)
+		case inputPassword:
+			t.SetLabel("Password")
+			t.CharLimit = 128
+			t.SetValue(host.Password)
+			t.Validate = notEmptyValidator
 		}
 
 		m.inputs[i] = t
 	}
 
-	// Though updateInputFields will automatically be called once ssh config is loaded,
-	// that will not happen when we create a new host. Thus calling it manually.
 	m.updateInputFields()
 	m.inputs[m.focusedInput].Focus()
 
@@ -481,16 +483,17 @@ func (m *editModel) updateInputFields() {
 	m.inputs[inputLogin].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.User)
 	m.inputs[inputNetworkPort].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.Port)
 	m.inputs[inputIdentityFile].Placeholder = fmt.Sprintf("%s: %s", prefix, m.host.SSHClientConfig.IdentityFile)
+	m.inputs[inputPassword].Placeholder = "Password"
 
 	hostInputLabel := lo.Ternary(customConnectString, "Command", "Host")
 	m.inputs[inputAddress].SetLabel(hostInputLabel)
 	m.inputs[inputAddress].SetDisplayTooltip(customConnectString)
 
-	// Get input fields by pointer to update their state
 	sshParamsInputFields := []*input.Input{
 		&m.inputs[inputLogin],
 		&m.inputs[inputNetworkPort],
 		&m.inputs[inputIdentityFile],
+		&m.inputs[inputPassword],
 	}
 
 	lo.ForEach(sshParamsInputFields, func(i *input.Input, n int) {

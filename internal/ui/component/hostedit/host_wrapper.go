@@ -24,6 +24,8 @@ func (m *hostModelWrapper) getHostAttributeValueByIndex(inputType int) string {
 		return m.RemotePort
 	case inputIdentityFile:
 		return m.IdentityFilePath
+	case inputPassword:
+		return m.Password
 	default:
 		return ""
 	}
@@ -43,6 +45,8 @@ func (m *hostModelWrapper) setHostAttributeByIndex(inputType int, value string) 
 		m.RemotePort = value
 	case inputIdentityFile:
 		m.IdentityFilePath = value
+	case inputPassword:
+		m.Password = value
 	}
 }
 

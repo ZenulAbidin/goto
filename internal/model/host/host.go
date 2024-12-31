@@ -2,13 +2,14 @@
 package host
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/grafviktor/goto/internal/model/ssh"
 )
 
 // NewHost - constructs new Host model.
-func NewHost(id int, title, description, address, loginName, identityFilePath, remotePort string) Host {
+func NewHost(id int, title, description, address, loginName, identityFilePath, remotePort, password string) Host {
 	return Host{
 		ID:               id,
 		Title:            title,
@@ -17,6 +18,7 @@ func NewHost(id int, title, description, address, loginName, identityFilePath, r
 		LoginName:        loginName,
 		RemotePort:       remotePort,
 		IdentityFilePath: identityFilePath,
+		Password:         password, // Add this line
 	}
 }
 
@@ -29,6 +31,7 @@ type Host struct {
 	RemotePort       string      `yaml:"network_port,omitempty"`
 	LoginName        string      `yaml:"username,omitempty"`
 	IdentityFilePath string      `yaml:"identity_file_path,omitempty"`
+	Password         string      `yaml:"password,omitempty"`
 	SSHClientConfig  *ssh.Config `yaml:"-"`
 }
 
@@ -41,8 +44,8 @@ func (h *Host) Clone() Host {
 		LoginName:        h.LoginName,
 		IdentityFilePath: h.IdentityFilePath,
 		RemotePort:       h.RemotePort,
+		Password:         h.Password,
 	}
-
 	return newHost
 }
 
@@ -57,18 +60,23 @@ func (h *Host) IsUserDefinedSSHCommand() bool {
 	return containsSpace || containsAtSymbol
 }
 
-// CmdSSHConnect - returns SSH command for connecting to a remote host.
 func (h *Host) CmdSSHConnect() string {
 	if h.IsUserDefinedSSHCommand() {
 		return ssh.ConnectCommand(ssh.OptionAddress{Value: h.Address})
 	}
 
-	return ssh.ConnectCommand([]ssh.Option{
+	options := []ssh.Option{
 		ssh.OptionPrivateKey{Value: h.IdentityFilePath},
 		ssh.OptionRemotePort{Value: h.RemotePort},
 		ssh.OptionLoginName{Value: h.LoginName},
 		ssh.OptionAddress{Value: h.Address},
-	}...)
+	}
+
+	if h.Password != "" {
+		return fmt.Sprintf("sshpass -p '%s' %s", h.Password, ssh.ConnectCommand(options...))
+	}
+
+	return ssh.ConnectCommand(options...)
 }
 
 // CmdSSHConfig - returns SSH command for loading host default configuration.
