@@ -179,7 +179,6 @@ func New(ctx context.Context, storage storage.HostStorage, state *state.Applicat
 			t.SetLabel("Password")
 			t.CharLimit = 128
 			t.SetValue(host.Password)
-			t.Validate = notEmptyValidator
 		}
 
 		m.inputs[i] = t

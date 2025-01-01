@@ -18,7 +18,7 @@ func NewHost(id int, title, description, address, loginName, identityFilePath, r
 		LoginName:        loginName,
 		RemotePort:       remotePort,
 		IdentityFilePath: identityFilePath,
-		Password:         password, // Add this line
+		Password:         password,
 	}
 }
 
